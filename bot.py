@@ -11,7 +11,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 logging.basicConfig(level=logging.INFO)
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-flash-latest")
 
 PROMPT_TEMPLATE = """Sen film tavsiya qiluvchi yordamchisan. Foydalanuvchi o'z kayfiyati va bo'sh vaqti haqida yozadi (masalan: "hafaman, 35 daqiqam bor").
 
@@ -34,6 +34,34 @@ Foydalanuvchi matni: {user_message}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Salom! 🎬\nQanday kayfiyatdasiz va necha daqiqalik film ko'rmoqchisiz?\n\n"
+        "Masalan: \"Hafaman, 35 daqiqam bor\" deb yozing."
+    )
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_text = update.message.text
+    await update.message.chat.send_action("typing")
+
+    try:
+        prompt = PROMPT_TEMPLATE.format(user_message=user_text)
+        response = model.generate_content(prompt)
+        await update.message.reply_text(response.text)
+    except Exception as e:
+        logging.error(f"Xatolik: {e}")
+        await update.message.reply_text(
+            "Kechirasiz, xatolik yuz berdi. Birozdan keyin qayta urinib ko'ring."
+        )
+
+
+def main():
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
         "Masalan: \"Hafaman, 35 daqiqam bor\" deb yozing."
     )
 
